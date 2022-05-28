@@ -73,8 +73,6 @@ def run(image: np.ndarray, model_selection: int,
 
 
 def main():
-    gr.close_all()
-
     args = parse_args()
 
     model_types = [
