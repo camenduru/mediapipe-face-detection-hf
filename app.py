@@ -23,7 +23,7 @@ mp_drawing = mp.solutions.drawing_utils
 
 TITLE = 'MediaPipe Face Detection'
 DESCRIPTION = 'https://google.github.io/mediapipe/'
-ARTICLE = None
+ARTICLE = '<center><img src="https://visitor-badge.glitch.me/badge?page_id=hysts.mediapipe-face-detection" alt="visitor badge"/></center>'
 
 TOKEN = os.environ['TOKEN']
 
