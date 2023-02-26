@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import argparse
 import os
 import pathlib
+import shlex
 import subprocess
 import tarfile
 
 if os.environ.get('SYSTEM') == 'spaces':
-    subprocess.call('pip uninstall -y opencv-python'.split())
-    subprocess.call('pip uninstall -y opencv-python-headless'.split())
-    subprocess.call('pip install opencv-python-headless==4.5.5.64'.split())
+    subprocess.call(shlex.split('pip uninstall -y opencv-python'))
+    subprocess.call(shlex.split('pip uninstall -y opencv-python-headless'))
+    subprocess.call(
+        shlex.split('pip install opencv-python-headless==4.5.5.64'))
 
 import gradio as gr
 import huggingface_hub
@@ -23,22 +24,8 @@ mp_drawing = mp.solutions.drawing_utils
 
 TITLE = 'MediaPipe Face Detection'
 DESCRIPTION = 'https://google.github.io/mediapipe/'
-ARTICLE = '<center><img src="https://visitor-badge.glitch.me/badge?page_id=hysts.mediapipe-face-detection" alt="visitor badge"/></center>'
 
-TOKEN = os.environ['TOKEN']
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--theme', type=str)
-    parser.add_argument('--live', action='store_true')
-    parser.add_argument('--share', action='store_true')
-    parser.add_argument('--port', type=int)
-    parser.add_argument('--disable-queue',
-                        dest='enable_queue',
-                        action='store_false')
-    parser.add_argument('--allow-flagging', type=str, default='never')
-    return parser.parse_args()
+HF_TOKEN = os.getenv('HF_TOKEN')
 
 
 def load_sample_images() -> list[pathlib.Path]:
@@ -51,7 +38,7 @@ def load_sample_images() -> list[pathlib.Path]:
             path = huggingface_hub.hf_hub_download(dataset_repo,
                                                    name,
                                                    repo_type='dataset',
-                                                   use_auth_token=TOKEN)
+                                                   use_auth_token=HF_TOKEN)
             with tarfile.open(path) as f:
                 f.extractall(image_dir.as_posix())
     return sorted(image_dir.rglob('*.jpg'))
@@ -72,45 +59,30 @@ def run(image: np.ndarray, model_selection: int,
     return res[:, :, ::-1]
 
 
-def main():
-    args = parse_args()
+model_types = [
+    'Short-range model (best for faces within 2 meters)',
+    'Full-range model (best for faces within 5 meters)',
+]
 
-    model_types = [
-        'Short-range model (best for faces within 2 meters)',
-        'Full-range model (best for faces within 5 meters)',
-    ]
+image_paths = load_sample_images()
+examples = [[path.as_posix(), model_types[0], 0.5] for path in image_paths]
 
-    image_paths = load_sample_images()
-    examples = [[path.as_posix(), model_types[0], 0.5] for path in image_paths]
-
-    gr.Interface(
-        run,
-        [
-            gr.inputs.Image(type='numpy', label='Input'),
-            gr.inputs.Radio(model_types,
-                            type='index',
-                            default=model_types[0],
-                            label='Model'),
-            gr.inputs.Slider(0,
-                             1,
-                             step=0.05,
-                             default=0.5,
-                             label='Minimum Detection Confidence'),
-        ],
-        gr.outputs.Image(type='numpy', label='Output'),
-        examples=examples,
-        title=TITLE,
-        description=DESCRIPTION,
-        article=ARTICLE,
-        theme=args.theme,
-        allow_flagging=args.allow_flagging,
-        live=args.live,
-    ).launch(
-        enable_queue=args.enable_queue,
-        server_port=args.port,
-        share=args.share,
-    )
-
-
-if __name__ == '__main__':
-    main()
+gr.Interface(
+    fn=run,
+    inputs=[
+        gr.Image(label='Input', type='numpy'),
+        gr.Radio(label='Model',
+                 choices=model_types,
+                 type='index',
+                 value=model_types[0]),
+        gr.Slider(label='Minimum Detection Confidence',
+                  minimum=0,
+                  maximum=1,
+                  step=0.05,
+                  value=0.5),
+    ],
+    outputs=gr.Image(label='Output', type='numpy'),
+    examples=examples,
+    title=TITLE,
+    description=DESCRIPTION,
+).launch(show_api=False)
