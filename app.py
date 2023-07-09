@@ -4,15 +4,6 @@ from __future__ import annotations
 
 import os
 import pathlib
-import shlex
-import subprocess
-import tarfile
-
-if os.environ.get('SYSTEM') == 'spaces':
-    subprocess.call(shlex.split('pip uninstall -y opencv-python'))
-    subprocess.call(shlex.split('pip uninstall -y opencv-python-headless'))
-    subprocess.call(
-        shlex.split('pip install opencv-python-headless==4.5.5.64'))
 
 import gradio as gr
 import huggingface_hub
@@ -24,24 +15,6 @@ mp_drawing = mp.solutions.drawing_utils
 
 TITLE = 'MediaPipe Face Detection'
 DESCRIPTION = 'https://google.github.io/mediapipe/'
-
-HF_TOKEN = os.getenv('HF_TOKEN')
-
-
-def load_sample_images() -> list[pathlib.Path]:
-    image_dir = pathlib.Path('images')
-    if not image_dir.exists():
-        image_dir.mkdir()
-        dataset_repo = 'hysts/input-images'
-        filenames = ['001.tar', '005.tar']
-        for name in filenames:
-            path = huggingface_hub.hf_hub_download(dataset_repo,
-                                                   name,
-                                                   repo_type='dataset',
-                                                   use_auth_token=HF_TOKEN)
-            with tarfile.open(path) as f:
-                f.extractall(image_dir.as_posix())
-    return sorted(image_dir.rglob('*.jpg'))
 
 
 def run(image: np.ndarray, model_selection: int,
@@ -64,8 +37,8 @@ model_types = [
     'Full-range model (best for faces within 5 meters)',
 ]
 
-image_paths = load_sample_images()
-examples = [[path.as_posix(), model_types[0], 0.5] for path in image_paths]
+image_paths = sorted(pathlib.Path('images').rglob('*.jpg'))
+examples = [[path, model_types[0], 0.5] for path in image_paths]
 
 gr.Interface(
     fn=run,
@@ -81,8 +54,8 @@ gr.Interface(
                   step=0.05,
                   value=0.5),
     ],
-    outputs=gr.Image(label='Output', type='numpy'),
+    outputs=gr.Image(label='Output'),
     examples=examples,
     title=TITLE,
     description=DESCRIPTION,
-).launch(show_api=False)
+).queue().launch()
