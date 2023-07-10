@@ -1,6 +1,6 @@
 ---
 title: Mediapipe Face Detection
-emoji: 💩
+emoji: 📚
 colorFrom: yellow
 colorTo: blue
 sdk: gradio
